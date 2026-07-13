@@ -1,0 +1,31 @@
+{
+  "name": "crypto-scanner-desktop",
+  "version": "1.0.0",
+  "description": "Crypto Scanner — Análise multi-fator com gráficos em tempo real",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "mkdir -p renderer/lib && cp node_modules/lightweight-charts/dist/lightweight-charts.standalone.production.js renderer/lib/",
+    "build": "electron-builder --linux",
+    "build:dir": "electron-builder --linux --dir"
+  },
+  "build": {
+    "appId": "com.cryptoscanner.desktop",
+    "productName": "Crypto Scanner",
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Finance",
+      "icon": "assets/icon.png"
+    }
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "lightweight-charts": "^4.1.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.0.0"
+  }
+}

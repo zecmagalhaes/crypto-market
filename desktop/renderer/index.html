@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' wss://stream.binance.com https://api.binance.com;">
+  <title>Crypto Scanner</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <nav id="sidebar">
+      <div class="logo">
+        <span class="logo-icon">📊</span>
+        <span class="logo-text">Crypto Scanner</span>
+      </div>
+      <ul class="nav-links">
+        <li data-page="dashboard" class="active">
+          <span class="nav-icon">🏠</span> Dashboard
+        </li>
+        <li data-page="detail">
+          <span class="nav-icon">📈</span> Análise Detalhada
+        </li>
+        <li data-page="history">
+          <span class="nav-icon">📋</span> Histórico
+        </li>
+        <li data-page="settings">
+          <span class="nav-icon">⚙️</span> Configurações
+        </li>
+      </ul>
+      <div class="sidebar-footer">
+        <div id="connection-status" class="status-dot connecting"></div>
+        <span class="status-text">Conectando...</span>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="content">
+      <!-- Dashboard Page -->
+      <section id="page-dashboard" class="page active">
+        <header class="page-header">
+          <h1>Dashboard</h1>
+          <div class="header-actions">
+            <span id="last-update" class="dim"></span>
+            <button id="btn-refresh-all" class="btn btn-primary">🔄 Atualizar</button>
+          </div>
+        </header>
+        <div id="dashboard-grid" class="pair-grid"></div>
+      </section>
+
+      <!-- Detail Page -->
+      <section id="page-detail" class="page">
+        <header class="page-header">
+          <div class="detail-header-left">
+            <button id="btn-back" class="btn btn-ghost">← Dashboard</button>
+            <h1 id="detail-symbol">BTCUSDT</h1>
+            <span id="detail-price" class="price-large"></span>
+            <span id="detail-change" class="change"></span>
+          </div>
+          <div class="detail-header-right">
+            <div id="detail-score" class="score-badge">--</div>
+          </div>
+        </header>
+        <div class="detail-grid">
+          <div class="chart-container">
+            <div id="chart-timeframe" class="tf-selector">
+              <button data-tf="15m">15m</button>
+              <button data-tf="1h">1H</button>
+              <button data-tf="4h" class="active">4H</button>
+              <button data-tf="1d">1D</button>
+              <button data-tf="1w">1S</button>
+            </div>
+            <div id="detail-chart"></div>
+          </div>
+          <div class="detail-sidebar">
+            <div id="detail-breakdown" class="breakdown"></div>
+            <div id="detail-levels" class="levels-card"></div>
+            <div id="detail-indicators" class="indicators-card"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- History Page -->
+      <section id="page-history" class="page">
+        <header class="page-header">
+          <h1>Histórico de Análises</h1>
+          <div class="header-actions">
+            <select id="history-filter" class="select">
+              <option value="">Todos os pares</option>
+            </select>
+          </div>
+        </header>
+        <div id="history-list" class="history-list"></div>
+      </section>
+
+      <!-- Settings Page -->
+      <section id="page-settings" class="page">
+        <header class="page-header">
+          <h1>Configurações</h1>
+        </header>
+        <div class="settings-container">
+          <div class="settings-card">
+            <h3>Watchlist</h3>
+            <p class="dim">Pares monitorados (máx 20)</p>
+            <div class="watchlist-editor">
+              <div class="input-row">
+                <input id="input-add-pair" type="text" placeholder="Ex: BTCUSDT" maxlength="12">
+                <button id="btn-add-pair" class="btn btn-primary">Adicionar</button>
+              </div>
+              <ul id="watchlist-items" class="watchlist"></ul>
+            </div>
+          </div>
+          <div class="settings-card">
+            <h3>Alertas</h3>
+            <div class="setting-row">
+              <label>Score mínimo para alerta</label>
+              <select id="setting-alert-threshold" class="select">
+                <option value="75">🟢 75 — Forte</option>
+                <option value="60" selected>🟡 60 — Moderado</option>
+                <option value="40">⚪ 40 — Neutro</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <label>Intervalo de scan (minutos)</label>
+              <select id="setting-scan-interval" class="select">
+                <option value="5">5 min</option>
+                <option value="15" selected>15 min</option>
+                <option value="30">30 min</option>
+                <option value="60">1 hora</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="lib/lightweight-charts.standalone.production.js"></script>
+  <script src="websocket.js"></script>
+  <script src="scanner.js"></script>
+  <script src="charts.js"></script>
+  <script src="components/dashboard.js"></script>
+  <script src="components/detail.js"></script>
+  <script src="components/history.js"></script>
+  <script src="components/settings.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

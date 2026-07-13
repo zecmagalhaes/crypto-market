@@ -1,0 +1,14 @@
+{
+  "name": "crypto-scanner",
+  "version": "1.0.0",
+  "description": "Scanner multi-fator para SOL e BTC — análise técnica + sentimento via Binance",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "scan": "node index.js",
+    "scan:sol": "node index.js --symbol SOLUSDT",
+    "scan:btc": "node index.js --symbol BTCUSDT"
+  },
+  "keywords": ["crypto", "trading", "binance", "scanner"],
+  "license": "MIT"
+}
