@@ -6,8 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "electron .",
-    "postinstall": "mkdir -p renderer/lib && cp node_modules/lightweight-charts/dist/lightweight-charts.standalone.production.js renderer/lib/ && npx @electron/rebuild -m . 2>/dev/null || electron-rebuild 2>/dev/null || echo '⚠️  Rode manualmente: npx @electron/rebuild'",
-    "rebuild": "npx @electron/rebuild -m .",
+    "postinstall": "mkdir -p renderer/lib && cp node_modules/lightweight-charts/dist/lightweight-charts.standalone.production.js renderer/lib/",
     "build": "electron-builder --linux",
     "build:dir": "electron-builder --linux --dir"
   },
@@ -21,12 +20,10 @@
     }
   },
   "dependencies": {
-    "better-sqlite3": "^11.0.0",
     "lightweight-charts": "^4.1.0",
     "ws": "^8.16.0"
   },
   "devDependencies": {
-    "@electron/rebuild": "^3.6.0",
     "electron": "^30.0.0",
     "electron-builder": "^24.0.0"
   }

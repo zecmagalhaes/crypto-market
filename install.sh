@@ -85,15 +85,6 @@ echo "  [2/5] Instalando dependências do desktop..."
 cd "$DESKTOP_DIR"
 npm install --silent 2>/dev/null || npm install
 
-# Rebuild better-sqlite3 contra a versão do Electron
-echo "         Rebuildando módulos nativos para Electron..."
-npx @electron/rebuild -m . 2>/dev/null || {
-  echo "         ⚠️  @electron/rebuild falhou. Tentando manualmente..."
-  cd "$DESKTOP_DIR/node_modules/better-sqlite3"
-  npx node-gyp rebuild --target=30.0.0 --arch=x64 --dist-url=https://electronjs.org/headers 2>/dev/null || true
-  cd "$DESKTOP_DIR"
-}
-
 # Copiar Lightweight Charts pro renderer
 if [ ! -f "$DESKTOP_DIR/renderer/lib/lightweight-charts.standalone.production.js" ]; then
   echo "         Copiando Lightweight Charts..."
