@@ -136,6 +136,29 @@
     </main>
   </div>
 
+  <script>
+    // Diagnóstico inline — executa antes de tudo
+    var diag = document.getElementById('connection-status');
+    var diagText = diag.nextElementSibling;
+
+    if (typeof window.api === 'undefined') {
+      diag.className = 'status-dot disconnected';
+      diagText.textContent = '❌ preload não carregou';
+      document.title = 'ERRO: preload';
+    } else {
+      diag.className = 'status-dot connecting';
+      diagText.textContent = 'API OK, testando IPC...';
+      window.api.health().then(function(h) {
+        document.title = 'OK v' + h.electron;
+        diag.className = 'status-dot connected';
+        diagText.textContent = 'Motor OK (Node ' + h.node + ')';
+      }).catch(function(e) {
+        document.title = 'ERRO: IPC';
+        diag.className = 'status-dot disconnected';
+        diagText.textContent = '❌ IPC: ' + (e.message || 'timeout');
+      });
+    }
+  </script>
   <script src="lib/lightweight-charts.standalone.production.js"></script>
   <script src="websocket.js"></script>
   <script src="scanner.js"></script>
