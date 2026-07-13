@@ -3,58 +3,70 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' wss://stream.binance.com https://api.binance.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' wss://stream.binance.com https://api.binance.com;">
   <title>Crypto Scanner</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="app">
-    <!-- Sidebar -->
+    <!-- Navigation Rail -->
     <nav id="sidebar">
       <div class="logo">
-        <span class="logo-icon">📊</span>
+        <div class="logo-icon">
+          <span class="material-symbols-outlined filled" style="font-size:24px">show_chart</span>
+        </div>
         <span class="logo-text">Crypto Scanner</span>
       </div>
       <ul class="nav-links">
         <li data-page="dashboard" class="active">
-          <span class="nav-icon">🏠</span> Dashboard
+          <span class="material-symbols-outlined nav-icon">dashboard</span>
+          <span class="nav-label">Dashboard</span>
         </li>
         <li data-page="detail">
-          <span class="nav-icon">📈</span> Análise Detalhada
+          <span class="material-symbols-outlined nav-icon">candlestick_chart</span>
+          <span class="nav-label">Análise</span>
         </li>
         <li data-page="history">
-          <span class="nav-icon">📋</span> Histórico
+          <span class="material-symbols-outlined nav-icon">history</span>
+          <span class="nav-label">Histórico</span>
         </li>
         <li data-page="settings">
-          <span class="nav-icon">⚙️</span> Configurações
+          <span class="material-symbols-outlined nav-icon">settings</span>
+          <span class="nav-label">Ajustes</span>
         </li>
       </ul>
       <div class="sidebar-footer">
         <div id="connection-status" class="status-dot connecting"></div>
-        <span class="status-text">Conectando...</span>
+        <span class="status-text">Conectando</span>
       </div>
     </nav>
 
     <!-- Main Content -->
     <main id="content">
-      <!-- Dashboard Page -->
+      <!-- Dashboard -->
       <section id="page-dashboard" class="page active">
         <header class="page-header">
           <h1>Dashboard</h1>
           <div class="header-actions">
             <span id="last-update" class="dim"></span>
-            <button id="btn-refresh-all" class="btn btn-primary">🔄 Atualizar</button>
+            <button id="btn-refresh-all" class="btn btn-primary">
+              <span class="material-symbols-outlined" style="font-size:18px">refresh</span>
+              Atualizar
+            </button>
           </div>
         </header>
         <div id="dashboard-grid" class="pair-grid"></div>
       </section>
 
-      <!-- Detail Page -->
+      <!-- Detail -->
       <section id="page-detail" class="page">
         <header class="page-header">
           <div class="detail-header-left">
-            <button id="btn-back" class="btn btn-ghost">← Dashboard</button>
-            <h1 id="detail-symbol">BTCUSDT</h1>
+            <button id="btn-back" class="btn btn-ghost">
+              <span class="material-symbols-outlined">arrow_back</span>
+              Dashboard
+            </button>
+            <h1 id="detail-symbol">BTC/USDT</h1>
             <span id="detail-price" class="price-large"></span>
             <span id="detail-change" class="change"></span>
           </div>
@@ -81,10 +93,10 @@
         </div>
       </section>
 
-      <!-- History Page -->
+      <!-- History -->
       <section id="page-history" class="page">
         <header class="page-header">
-          <h1>Histórico de Análises</h1>
+          <h1>Histórico</h1>
           <div class="header-actions">
             <select id="history-filter" class="select">
               <option value="">Todos os pares</option>
@@ -94,25 +106,34 @@
         <div id="history-list" class="history-list"></div>
       </section>
 
-      <!-- Settings Page -->
+      <!-- Settings -->
       <section id="page-settings" class="page">
         <header class="page-header">
-          <h1>Configurações</h1>
+          <h1>Ajustes</h1>
         </header>
         <div class="settings-container">
           <div class="settings-card">
-            <h3>Watchlist</h3>
+            <h3>
+              <span class="material-symbols-outlined" style="font-size:18px">star</span>
+              Watchlist
+            </h3>
             <p class="dim">Pares monitorados (máx 20)</p>
             <div class="watchlist-editor">
               <div class="input-row">
                 <input id="input-add-pair" type="text" placeholder="Ex: BTCUSDT" maxlength="12">
-                <button id="btn-add-pair" class="btn btn-primary">Adicionar</button>
+                <button id="btn-add-pair" class="btn btn-primary">
+                  <span class="material-symbols-outlined" style="font-size:16px">add</span>
+                  Adicionar
+                </button>
               </div>
               <ul id="watchlist-items" class="watchlist"></ul>
             </div>
           </div>
           <div class="settings-card">
-            <h3>Alertas</h3>
+            <h3>
+              <span class="material-symbols-outlined" style="font-size:18px">notifications</span>
+              Alertas
+            </h3>
             <div class="setting-row">
               <label>Score mínimo para alerta</label>
               <select id="setting-alert-threshold" class="select">
@@ -122,11 +143,11 @@
               </select>
             </div>
             <div class="setting-row">
-              <label>Intervalo de scan (minutos)</label>
+              <label>Intervalo de scan</label>
               <select id="setting-scan-interval" class="select">
-                <option value="5">5 min</option>
-                <option value="15" selected>15 min</option>
-                <option value="30">30 min</option>
+                <option value="5">5 minutos</option>
+                <option value="15" selected>15 minutos</option>
+                <option value="30">30 minutos</option>
                 <option value="60">1 hora</option>
               </select>
             </div>
@@ -137,25 +158,23 @@
   </div>
 
   <script>
-    // Diagnóstico inline — executa antes de tudo
+    // Diagnóstico inline
     var diag = document.getElementById('connection-status');
     var diagText = diag.nextElementSibling;
-
     if (typeof window.api === 'undefined') {
       diag.className = 'status-dot disconnected';
-      diagText.textContent = '❌ preload não carregou';
+      diagText.textContent = 'preload';
       document.title = 'ERRO: preload';
     } else {
       diag.className = 'status-dot connecting';
-      diagText.textContent = 'API OK, testando IPC...';
+      diagText.textContent = 'Motor...';
       window.api.health().then(function(h) {
-        document.title = 'OK v' + h.electron;
+        document.title = 'Crypto Scanner';
         diag.className = 'status-dot connected';
-        diagText.textContent = 'Motor OK (Node ' + h.node + ')';
+        diagText.textContent = 'Online';
       }).catch(function(e) {
-        document.title = 'ERRO: IPC';
         diag.className = 'status-dot disconnected';
-        diagText.textContent = '❌ IPC: ' + (e.message || 'timeout');
+        diagText.textContent = 'IPC: ' + e.message;
       });
     }
   </script>
