@@ -13,14 +13,18 @@ const App = {
       });
     });
 
-    // Connection status
-    priceStream.onStatusChange = (status) => {
+    // Connection status — usa WebSocketManager em vez do antigo priceStream
+    wsManager.on('status', (status) => {
       const dot = document.getElementById('connection-status');
+      if (!dot) return;
       const text = dot.nextElementSibling;
+      if (!text) return;
+
       dot.className = 'status-dot ' + status;
       text.textContent = status === 'connected' ? 'Conectado' :
-        status === 'connecting' ? 'Conectando...' : 'Desconectado';
-    };
+        status === 'connecting' ? 'Conectando...' :
+        status === 'reconnecting' ? 'Reconectando...' : 'Desconectado';
+    });
 
     // Start on dashboard
     await this.navigate('dashboard');

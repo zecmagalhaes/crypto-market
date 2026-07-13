@@ -792,3 +792,57 @@ input[type="text"]::placeholder { color: var(--md-on-surface-dim); }
 @keyframes ripple-anim {
   to { transform: scale(4); opacity: 0; }
 }
+
+/* ── Opportunity Cards ─────────────────────────────── */
+
+.pair-card.opportunity {
+  border: 2px solid var(--md-success);
+  box-shadow: 0 0 12px rgba(102, 187, 106, 0.3);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(102, 187, 106, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(102, 187, 106, 0.5); }
+}
+
+/* Strong opportunity (score ≥ 75): glow duplo */
+.pair-card.opportunity-strong {
+  border-color: #3fb950;
+  box-shadow: 0 0 16px rgba(63, 185, 80, 0.4);
+  animation: pulse-glow-strong 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow-strong {
+  0%, 100% { box-shadow: 0 0 10px rgba(63, 185, 80, 0.3); }
+  50% { box-shadow: 0 0 28px rgba(63, 185, 80, 0.6), 0 0 40px rgba(63, 185, 80, 0.15); }
+}
+
+/* Moderate opportunity (score 60-74): glow amarelo */
+.pair-card.opportunity-moderate {
+  border-color: #d2991d;
+  box-shadow: 0 0 12px rgba(210, 153, 29, 0.3);
+  animation: pulse-glow-moderate 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow-moderate {
+  0%, 100% { box-shadow: 0 0 8px rgba(210, 153, 29, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(210, 153, 29, 0.45); }
+}
+
+/* Dot badge no canto do card */
+.pair-card .opportunity-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--md-success);
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.6); }
+}
