@@ -17,6 +17,10 @@ class ChartManager {
     this.tp2Line = null;
     this.supportLines = [];
     this.resistanceLines = [];
+    this.realtimeUnsub = null;
+    this.lastBar = null;
+    this.currentSymbol = null;
+    this.currentInterval = null;
   }
 
   init(container) {
@@ -108,8 +112,12 @@ class ChartManager {
   }
 
   async loadData(symbol, interval = '4h') {
+    this.currentSymbol = symbol;
+    this.currentInterval = interval;
     const klines = await scannerService.getKlines(symbol, interval, 200);
     if (!klines || klines.length === 0) return;
+
+    this.lastBar = klines[klines.length - 1];
 
     const candleData = klines.map(k => ({
       time: k.time,
@@ -147,6 +155,46 @@ class ChartManager {
     this.lowerBand.setData(bbStart.map((k, i) => ({ time: k.time, value: bb.lower[i] })));
 
     this.chart.timeScale().fitContent();
+
+    // Inicia atualização da última vela em tempo real via WebSocket
+    this._startRealtime(symbol, interval);
+  }
+
+  _startRealtime(symbol, interval) {
+    this._stopRealtime();
+    this.realtimeUnsub = priceStream.subscribe(symbol, (data) => {
+      if (!this.candleSeries || !this.lastBar) return;
+      const price = data.price;
+      const now = Math.floor(Date.now() / 1000);
+      const intervalSec = this._intervalSeconds(interval);
+      const barTime = Math.floor(now / intervalSec) * intervalSec;
+
+      if (barTime > this.lastBar.time) {
+        // Nova vela
+        this.lastBar = { time: barTime, open: price, high: price, low: price, close: price };
+      } else {
+        // Atualiza vela atual
+        if (price > this.lastBar.high) this.lastBar.high = price;
+        if (price < this.lastBar.low) this.lastBar.low = price;
+        this.lastBar.close = price;
+      }
+      try { this.candleSeries.update({ ...this.lastBar }); } catch (e) {}
+    });
+  }
+
+  _stopRealtime() {
+    if (this.realtimeUnsub) { this.realtimeUnsub(); this.realtimeUnsub = null; }
+  }
+
+  _intervalSeconds(tf) {
+    switch (tf) {
+      case '15m': return 15 * 60;
+      case '1h': return 3600;
+      case '4h': return 4 * 3600;
+      case '1d': return 86400;
+      case '1w': return 7 * 86400;
+      default: return 4 * 3600;
+    }
   }
 
   drawLevels(levels) {
@@ -253,6 +301,15 @@ class ChartManager {
     if (container) {
       this.chart.resize(container.clientWidth, container.clientHeight);
     }
+  }
+
+  destroy() {
+    this._stopRealtime();
+    this._clearLevels();
+    if (this.chart) { this.chart.remove(); this.chart = null; }
+    this.candleSeries = null;
+    this.lastBar = null;
+    this.currentSymbol = null;
   }
 
   // ── Indicator calculators ──────────────────────────

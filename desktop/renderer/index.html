@@ -158,14 +158,18 @@
   </div>
 
   <script>
-    // Diagnóstico inline
+    // Diagnóstico com retry (evita race condition no startup)
     var diag = document.getElementById('connection-status');
     var diagText = diag.nextElementSibling;
-    if (typeof window.api === 'undefined') {
-      diag.className = 'status-dot disconnected';
-      diagText.textContent = 'preload';
-      document.title = 'ERRO: preload';
-    } else {
+
+    function checkHealth(retries) {
+      retries = retries || 0;
+      if (typeof window.api === 'undefined') {
+        diag.className = 'status-dot disconnected';
+        diagText.textContent = 'preload';
+        document.title = 'ERRO: preload';
+        return;
+      }
       diag.className = 'status-dot connecting';
       diagText.textContent = 'Motor...';
       window.api.health().then(function(h) {
@@ -173,10 +177,16 @@
         diag.className = 'status-dot connected';
         diagText.textContent = 'Online';
       }).catch(function(e) {
-        diag.className = 'status-dot disconnected';
-        diagText.textContent = 'IPC: ' + e.message;
+        if (retries < 3) {
+          setTimeout(function() { checkHealth(retries + 1); }, 500);
+        } else {
+          diag.className = 'status-dot disconnected';
+          diagText.textContent = 'Offline';
+          console.warn('Health check falhou após 3 tentativas:', e.message);
+        }
       });
     }
+    checkHealth();
   </script>
   <script src="lib/lightweight-charts.standalone.production.js"></script>
   <script src="websocket.js"></script>

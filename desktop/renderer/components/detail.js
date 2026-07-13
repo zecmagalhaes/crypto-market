@@ -122,7 +122,10 @@ class DetailView {
       </div>`;
   }
 
-  destroy() { if (this.unsubscribe) this.unsubscribe(); }
+  destroy() {
+    if (this.unsubscribe) this.unsubscribe();
+    chartManager.destroy();
+  }
 }
 
 const detailView = new DetailView();
