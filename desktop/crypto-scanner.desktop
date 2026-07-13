@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Crypto Scanner
+GenericName=Crypto Market Scanner
+Comment=Scanner multi-fator para criptomoedas com análise técnica e gráficos em tempo real
+Icon=crypto-scanner
+Exec=crypto-scanner
+Terminal=false
+Categories=Finance;Office;
+StartupWMClass=Crypto Scanner
+Keywords=crypto;bitcoin;trading;chart;analysis;
