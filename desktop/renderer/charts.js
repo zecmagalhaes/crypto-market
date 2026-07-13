@@ -162,28 +162,82 @@ class ChartManager {
 
   _startRealtime(symbol, interval) {
     this._stopRealtime();
-    this.realtimeUnsub = priceStream.subscribe(symbol, (data) => {
-      if (!this.candleSeries || !this.lastBar) return;
-      const price = data.price;
-      const now = Math.floor(Date.now() / 1000);
-      const intervalSec = this._intervalSeconds(interval);
-      const barTime = Math.floor(now / intervalSec) * intervalSec;
 
-      if (barTime > this.lastBar.time) {
-        // Nova vela
-        this.lastBar = { time: barTime, open: price, high: price, low: price, close: price };
-      } else {
-        // Atualiza vela atual
-        if (price > this.lastBar.high) this.lastBar.high = price;
-        if (price < this.lastBar.low) this.lastBar.low = price;
-        this.lastBar.close = price;
-      }
-      try { this.candleSeries.update({ ...this.lastBar }); } catch (e) {}
+    // Escolhe o stream kline conforme o timeframe do gráfico
+    // ≤ 1h → kline_1s (máxima granularidade pra velas que demoram pra fechar)
+    // ≥ 4h → kline_1m (suficiente pra timeframes longos)
+    const klineStream = this._pickKlineStream(interval);
+    const streamName = `${symbol.toLowerCase()}@${klineStream}`;
+
+    this.realtimeUnsub = wsManager.subscribe(streamName, (data) => {
+      this._onKlineUpdate(data);
     });
   }
 
+  _pickKlineStream(interval) {
+    switch (interval) {
+      case '15m': return 'kline_1s';
+      case '1h':  return 'kline_1s';
+      case '4h':  return 'kline_1m';
+      case '1d':  return 'kline_1m';
+      case '1w':  return 'kline_1m';
+      default:    return 'kline_1m';
+    }
+  }
+
+  /**
+   * Handler de evento kline da Binance.
+   * Estrutura esperada:
+   * { e: "kline", E: ms, s: "BTCUSDT", k: { t, T, i, o, h, l, c, v, x, ... } }
+   */
+  _onKlineUpdate(data) {
+    if (!this.candleSeries || !data?.k) return;
+
+    const k = data.k;
+    const barTime = Math.floor(k.t / 1000); // Binance envia ms, Lightweight Charts usa segundos
+
+    if (!this.lastBar || barTime > this.lastBar.time) {
+      // NOVA VELA: a anterior fechou — insere a anterior como finalizada
+      if (this.lastBar && this.lastBar.time > 0) {
+        try { this.candleSeries.update(this.lastBar); } catch (e) { /* ignore */ }
+      }
+
+      this.lastBar = {
+        time: barTime,
+        open: parseFloat(k.o),
+        high: parseFloat(k.h),
+        low: parseFloat(k.l),
+        close: parseFloat(k.c),
+      };
+    } else {
+      // MESMA VELA: atualiza OHLC
+      this.lastBar.high = Math.max(this.lastBar.high, parseFloat(k.h));
+      this.lastBar.low = Math.min(this.lastBar.low, parseFloat(k.l));
+      this.lastBar.close = parseFloat(k.c);
+    }
+
+    // Atualiza a série do chart
+    try {
+      this.candleSeries.update(this.lastBar);
+
+      // Atualiza volume se a série de volume estiver disponível
+      if (this.volumeSeries && k.v) {
+        const vol = parseFloat(k.v);
+        const isUp = this.lastBar.close >= this.lastBar.open;
+        this.volumeSeries.update({
+          time: barTime,
+          value: vol,
+          color: isUp ? 'rgba(63,185,80,0.3)' : 'rgba(248,81,73,0.3)',
+        });
+      }
+    } catch (e) { /* ignore chart update errors */ }
+  }
+
   _stopRealtime() {
-    if (this.realtimeUnsub) { this.realtimeUnsub(); this.realtimeUnsub = null; }
+    if (this.realtimeUnsub) {
+      this.realtimeUnsub(); // calls unsubscribe on the stream
+      this.realtimeUnsub = null;
+    }
   }
 
   _intervalSeconds(tf) {
