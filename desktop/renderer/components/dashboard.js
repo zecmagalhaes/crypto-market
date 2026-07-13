@@ -45,9 +45,10 @@ class Dashboard {
     this.unsubscribers = [];
     this.scanning = false;
     this.throttle = new PriceThrottle();
-    this.alertThreshold = 60;       // default
-    this.lastNotification = new Map(); // symbol -> timestamp (debounce)
-    this.opportunitySymbols = new Set(); // symbols currently highlighted
+    this.alertThreshold = 60;
+    this.lastNotification = new Map();
+    this.opportunitySymbols = new Set();
+    this._tickCounter = 0;
   }
 
   log(msg) { console.log('[Dashboard]', msg); }
@@ -190,8 +191,10 @@ class Dashboard {
     this.unsubscribers.forEach(fn => fn());
     this.unsubscribers = [];
 
-    // Inicializa o WebSocketManager se ainda não foi iniciado
+    console.log('[Dashboard] Conectando WebSocket para', symbols.length, 'pares. Status atual:', wsManager.status);
+
     if (wsManager.status === 'disconnected') {
+      console.log('[Dashboard] Inicializando WebSocket...');
       wsManager.init();
     }
 
@@ -202,12 +205,18 @@ class Dashboard {
           const price = parseFloat(data.c);
           const change = parseFloat(data.P);
           this.throttle.update(sym, price, change);
+          // Atualiza indicador de ticks a cada ~20 atualizações
+          if (++this._tickCounter % 20 === 0) {
+            this.lastUpdate.textContent = 'Live • ' + new Date().toLocaleTimeString('pt-BR');
+          }
         });
         this.unsubscribers.push(unsub);
       } catch (e) {
-        this.log('Erro ao conectar stream: ' + sym);
+        console.error('[Dashboard] Erro ao conectar stream:', sym, e);
       }
     });
+
+    console.log('[Dashboard]', symbols.length, 'streams registradas');
   }
 
   // ── Opportunity Detection ───────────────────────────

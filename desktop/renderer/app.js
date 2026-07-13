@@ -20,10 +20,18 @@ const App = {
       const text = dot.nextElementSibling;
       if (!text) return;
 
-      dot.className = 'status-dot ' + status;
-      text.textContent = status === 'connected' ? 'Conectado' :
-        status === 'connecting' ? 'Conectando...' :
-        status === 'reconnecting' ? 'Reconectando...' : 'Desconectado';
+      console.log('[App] WebSocket status:', status);
+      dot.className = 'status-dot ' + (status === 'connected' ? 'connected' : status === 'connecting' || status === 'reconnecting' ? 'connecting' : 'disconnected');
+      text.textContent = status === 'connected' ? 'Live' :
+        status === 'connecting' ? 'WS...' :
+        status === 'reconnecting' ? 'Retry' : 'Offline';
+    });
+
+    // Também escuta erros
+    wsManager.on('error', (err) => {
+      console.error('[App] WebSocket error:', err);
+      const dot = document.getElementById('connection-status');
+      if (dot) dot.className = 'status-dot disconnected';
     });
 
     // Start on dashboard

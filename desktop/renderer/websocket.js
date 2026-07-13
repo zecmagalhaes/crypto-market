@@ -119,6 +119,7 @@ class WebSocketManager {
 
     // Re-subscribe all streams that have callbacks
     const streamNames = [...this.activeStreams.keys()];
+    console.log('[WS] Conectado. Streams ativas:', streamNames.length, streamNames.slice(0, 5).join(', '));
     if (streamNames.length > 0) {
       this._sendSubscribe(streamNames);
     }
