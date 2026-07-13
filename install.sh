@@ -4,21 +4,6 @@ set -e
 # ═══════════════════════════════════════════════════════════
 # Crypto Scanner — Instalador Desktop Linux
 # ═══════════════════════════════════════════════════════════
-#
-# Este script:
-#   1. Instala as dependências do projeto
-#   2. Cria um atalho no menu de aplicativos (.desktop)
-#   3. Cria um comando global `crypto-scanner`
-#
-# Após a instalação, você pode:
-#   - Abrir pelo menu de aplicativos (buscar "Crypto Scanner")
-#   - Rodar `crypto-scanner` no terminal
-#   - Fixar na barra de tarefas / dock
-#
-# Uso:
-#   chmod +x install.sh
-#   ./install.sh
-# ═══════════════════════════════════════════════════════════
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DESKTOP_DIR="$PROJECT_DIR/desktop"
@@ -30,23 +15,68 @@ LAUNCHER="$BIN_DIR/crypto-scanner"
 echo ""
 echo "  📦 Crypto Scanner — Instalador Desktop"
 echo "  ───────────────────────────────────────"
+echo "  Projeto: $PROJECT_DIR"
 echo ""
 
-# ── 1. Instalar dependências ──────────────────────────
+# ── 0. Verificar dependências do sistema ──────────────
 
-echo "  [1/4] Instalando dependências do scanner..."
+echo "  [0/5] Verificando dependências do sistema..."
+
+MISSING=""
+
+check_pkg() {
+  dpkg -s "$1" >/dev/null 2>&1 || MISSING="$MISSING $1"
+}
+
+check_pkg libgtk-3-0
+check_pkg libnss3
+check_pkg libx11-xcb1
+check_pkg libxcomposite1
+check_pkg libxdamage1
+check_pkg libxrandr2
+check_pkg libgbm1
+check_pkg libasound2
+check_pkg libpango-1.0-0
+
+if [ -n "$MISSING" ]; then
+  echo ""
+  echo "  ⚠️  Pacotes necessários para o Electron não encontrados:"
+  echo "     $MISSING"
+  echo ""
+  echo "  Instale com:"
+  echo "     sudo apt install$MISSING"
+  echo ""
+  read -p "  Deseja instalar agora? (s/N) " -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Ss]$ ]]; then
+    sudo apt install -y $MISSING
+  else
+    echo "  Continuando sem instalar. O app pode não abrir."
+  fi
+else
+  echo "         ✅ Todas as dependências do sistema OK"
+fi
+
+# ── 1. Instalar dependências npm ──────────────────────
+
+echo "  [1/5] Instalando dependências do scanner..."
 cd "$PROJECT_DIR"
 npm install --silent 2>/dev/null || npm install
 
-echo "  [2/4] Instalando dependências do desktop..."
+echo "  [2/5] Instalando dependências do desktop..."
 cd "$DESKTOP_DIR"
 npm install --silent 2>/dev/null || npm install
 
+# Copiar Lightweight Charts pro renderer
 if [ ! -f "$DESKTOP_DIR/renderer/lib/lightweight-charts.standalone.production.js" ]; then
   echo "         Copiando Lightweight Charts..."
   mkdir -p "$DESKTOP_DIR/renderer/lib"
   cp "$DESKTOP_DIR/node_modules/lightweight-charts/dist/lightweight-charts.standalone.production.js" \
-     "$DESKTOP_DIR/renderer/lib/" 2>/dev/null || true
+     "$DESKTOP_DIR/renderer/lib/" 2>/dev/null || {
+    echo "         ⚠️  Erro ao copiar Lightweight Charts. Baixando..."
+    curl -sL "https://unpkg.com/lightweight-charts@4/dist/lightweight-charts.standalone.production.js" \
+      -o "$DESKTOP_DIR/renderer/lib/lightweight-charts.standalone.production.js"
+  }
 fi
 
 # ── 2. Criar diretórios ────────────────────────────────
@@ -54,26 +84,25 @@ fi
 mkdir -p "$BIN_DIR" "$APPS_DIR" "$ICONS_DIR"
 
 # ── 3. Criar launcher (comando global) ─────────────────
+# ⚠️ Caminho ABSOLUTO do projeto é fixado aqui
 
-cat > "$LAUNCHER" << 'LAUNCHEREOF'
+cat > "$LAUNCHER" << LAUNCHEREOF
 #!/usr/bin/env bash
-SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-# Resolve o caminho real do projeto a partir do link simbólico
-PROJECT="$(dirname "$(dirname "$SCRIPT_DIR")")/crypto-market/desktop"
-cd "$PROJECT"
-npx electron . --no-sandbox
+cd "$DESKTOP_DIR"
+exec npx electron . --no-sandbox "\$@"
 LAUNCHEREOF
 
 chmod +x "$LAUNCHER"
+
+echo "  [3/5] Launcher criado: $LAUNCHER"
 
 # ── 4. Instalar ícone e atalho .desktop ────────────────
 
 if [ -f "$DESKTOP_DIR/assets/icon.png" ]; then
   cp "$DESKTOP_DIR/assets/icon.png" "$ICONS_DIR/crypto-scanner.png"
-  echo "         Ícone instalado em $ICONS_DIR"
+  echo "  [4/5] Ícone instalado"
 fi
 
-# Gera o arquivo .desktop com caminhos absolutos
 cat > "$APPS_DIR/crypto-scanner.desktop" << DESKTOPEOF
 [Desktop Entry]
 Type=Application
@@ -88,22 +117,38 @@ StartupWMClass=Crypto Scanner
 Keywords=crypto;bitcoin;trading;chart;analysis;
 DESKTOPEOF
 
-# Atualizar cache de ícones e aplicativos
+echo "  [5/5] Atalho criado no menu de aplicativos"
+
+# Atualizar cache
 update-desktop-database "$APPS_DIR" 2>/dev/null || true
 gtk-update-icon-cache "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+
+# ── Verificar PATH ─────────────────────────────────────
+
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+  echo ""
+  echo "  ⚠️  $HOME/.local/bin não está no seu PATH."
+  echo "     Adicione ao seu ~/.bashrc:"
+  echo ""
+  echo '     export PATH="$HOME/.local/bin:$PATH"'
+  echo ""
+fi
 
 # ── Done ───────────────────────────────────────────────
 
 echo ""
 echo "  ✅ Instalação concluída!"
 echo ""
-echo "  🚀 Para abrir o Crypto Scanner:"
-echo "     - Menu de aplicativos → buscar 'Crypto Scanner'"
-echo "     - Terminal → digite: crypto-scanner"
+echo "  🚀 Abrir o Crypto Scanner:"
+echo "     - Menu de aplicativos → 'Crypto Scanner'"
+echo "     - Terminal → crypto-scanner"
 echo ""
-echo "  📊 Scanner CLI (terminal):"
-echo "     cd $PROJECT_DIR && node index.js -s BTCUSDT"
+echo "  🔍 Scanner CLI (terminal):"
+echo "     node $PROJECT_DIR/index.js -s BTCUSDT"
 echo ""
-echo "  🔄 Para atualizar:"
+echo "  🩺 Diagnóstico (se não abrir):"
+echo "     $PROJECT_DIR/diagnose.sh"
+echo ""
+echo "  🔄 Atualizar:"
 echo "     cd $PROJECT_DIR && git pull && ./install.sh"
 echo ""
