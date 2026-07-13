@@ -53,7 +53,8 @@ echo ""
 
 echo "📋 Dependências do Electron (bibliotecas do sistema)"
 for lib in libgtk-3-0 libnss3 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2 libpango-1.0-0; do
-  check "$lib" dpkg -s "$lib"
+  t64="${lib}t64"
+  check "$lib" bash -c "dpkg -s '$lib' >/dev/null 2>&1 || dpkg -s '$t64' >/dev/null 2>&1"
 done
 echo ""
 

@@ -23,9 +23,27 @@ echo ""
 echo "  [0/5] Verificando dependências do sistema..."
 
 MISSING=""
+MISSING_PKGS=""
 
 check_pkg() {
-  dpkg -s "$1" >/dev/null 2>&1 || MISSING="$MISSING $1"
+  # Ubuntu 24.04+ usa sufixo t64 para alguns pacotes
+  local pkg="$1"
+  local t64="${pkg}t64"
+  if dpkg -s "$pkg" >/dev/null 2>&1 || dpkg -s "$t64" >/dev/null 2>&1; then
+    return 0
+  fi
+  # Verifica qual nome instalar: t64 se disponível, senão o original
+  if apt-cache show "$t64" >/dev/null 2>&1; then
+    MISSING="$MISSING $t64"
+    MISSING_PKGS="$MISSING_PKGS $t64"
+  elif apt-cache show "$pkg" >/dev/null 2>&1; then
+    MISSING="$MISSING $pkg"
+    MISSING_PKGS="$MISSING_PKGS $pkg"
+  else
+    MISSING="$MISSING $pkg"
+    MISSING_PKGS="$MISSING_PKGS $pkg"
+  fi
+  return 1
 }
 
 check_pkg libgtk-3-0
@@ -44,12 +62,12 @@ if [ -n "$MISSING" ]; then
   echo "     $MISSING"
   echo ""
   echo "  Instale com:"
-  echo "     sudo apt install$MISSING"
+  echo "     sudo apt install$MISSING_PKGS"
   echo ""
   read -p "  Deseja instalar agora? (s/N) " -n 1 -r
   echo
   if [[ $REPLY =~ ^[Ss]$ ]]; then
-    sudo apt install -y $MISSING
+    sudo apt install -y $MISSING_PKGS
   else
     echo "  Continuando sem instalar. O app pode não abrir."
   fi
