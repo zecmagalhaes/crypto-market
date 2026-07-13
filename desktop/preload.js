@@ -1,6 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('api', {
+  // Health
+  health: () => ipcRenderer.invoke('health'),
+
   // Watchlist
   getWatchlist: () => ipcRenderer.invoke('watchlist:get'),
   addToWatchlist: (symbol) => ipcRenderer.invoke('watchlist:add', symbol),

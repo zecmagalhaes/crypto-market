@@ -12,49 +12,57 @@ let db = null;
 // ── Database ──────────────────────────────────────────
 
 function initDB() {
-  const dbPath = path.join(app.getPath('userData'), 'scanner.db');
-  db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
+  try {
+    const dbPath = path.join(app.getPath('userData'), 'scanner.db');
+    db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS scans (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      symbol TEXT NOT NULL,
-      score INTEGER NOT NULL,
-      signal TEXT NOT NULL,
-      price REAL NOT NULL,
-      entry REAL,
-      stop_loss REAL,
-      take_profit REAL,
-      rr REAL,
-      breakdown TEXT,
-      timestamp INTEGER NOT NULL
-    );
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS scans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT NOT NULL,
+        score INTEGER NOT NULL,
+        signal TEXT NOT NULL,
+        price REAL NOT NULL,
+        entry REAL,
+        stop_loss REAL,
+        take_profit REAL,
+        rr REAL,
+        breakdown TEXT,
+        timestamp INTEGER NOT NULL
+      );
 
-    CREATE TABLE IF NOT EXISTS watchlist (
-      symbol TEXT PRIMARY KEY,
-      added_at INTEGER NOT NULL,
-      enabled INTEGER DEFAULT 1
-    );
+      CREATE TABLE IF NOT EXISTS watchlist (
+        symbol TEXT PRIMARY KEY,
+        added_at INTEGER NOT NULL,
+        enabled INTEGER DEFAULT 1
+      );
 
-    CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-  `);
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `);
 
-  // Default watchlist
-  const count = db.prepare('SELECT COUNT(*) as c FROM watchlist').get();
-  if (count.c === 0) {
-    const defaults = [
-      'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT',
-      'ADAUSDT', 'DOGEUSDT', 'AVAXUSDT', 'DOTUSDT', 'LINKUSDT',
-      'MATICUSDT', 'UNIUSDT', 'ATOMUSDT', 'LTCUSDT', 'ETCUSDT',
-      'FILUSDT', 'APTUSDT', 'ARBUSDT', 'OPUSDT', 'NEARUSDT',
-    ];
-    const insert = db.prepare('INSERT OR IGNORE INTO watchlist (symbol, added_at) VALUES (?, ?)');
-    const now = Date.now();
-    for (const s of defaults) insert.run(s, now);
+    // Default watchlist
+    const count = db.prepare('SELECT COUNT(*) as c FROM watchlist').get();
+    if (count.c === 0) {
+      const defaults = [
+        'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT',
+        'ADAUSDT', 'DOGEUSDT', 'AVAXUSDT', 'DOTUSDT', 'LINKUSDT',
+        'MATICUSDT', 'UNIUSDT', 'ATOMUSDT', 'LTCUSDT', 'ETCUSDT',
+        'FILUSDT', 'APTUSDT', 'ARBUSDT', 'OPUSDT', 'NEARUSDT',
+      ];
+      const insert = db.prepare('INSERT OR IGNORE INTO watchlist (symbol, added_at) VALUES (?, ?)');
+      const now = Date.now();
+      for (const s of defaults) insert.run(s, now);
+    }
+
+    console.log('[Main] Database initialized at', dbPath);
+    return true;
+  } catch (err) {
+    console.error('[Main] Database init failed:', err.message);
+    return false;
   }
 }
 
@@ -106,6 +114,15 @@ function createTray() {
 // ── IPC Handlers ──────────────────────────────────────
 
 function setupIPC() {
+  // Health check
+  ipcMain.handle('health', () => ({
+    ok: true,
+    db: !!db,
+    node: process.version,
+    electron: process.versions.electron,
+    arch: process.arch,
+  }));
+
   // Watchlist
   ipcMain.handle('watchlist:get', () => {
     return db.prepare('SELECT * FROM watchlist WHERE enabled=1 ORDER BY symbol').all();

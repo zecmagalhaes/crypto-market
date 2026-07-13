@@ -11,66 +11,129 @@ class Dashboard {
     this.unsubscribers = [];
   }
 
+  log(msg) { console.log('[Dashboard]', msg); }
+  error(msg) { console.error('[Dashboard]', msg); }
+
   async init() {
     this.btnRefresh.addEventListener('click', () => this.refreshAll());
+    this._showStatus('⏳', 'Verificando conexão...');
 
-    this.container.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-dim);">
-        <div style="font-size: 40px; margin-bottom: 12px;">⏳</div>
-        <p>Carregando pares e executando análises...</p>
-      </div>
-    `;
+    // Teste básico: consegue falar com o main process?
+    try {
+      const test = await window.api.getWatchlist();
+      this.log('Watchlist recebida: ' + (test ? test.length : 0) + ' pares');
+    } catch (e) {
+      this.error('IPC falhou: ' + e.message);
+      this._showError(
+        'Falha na comunicação com o motor de análise',
+        'O processo principal do app pode ter falhado ao iniciar.\n\n' +
+        'Tente:\n' +
+        '1. Fechar e reabrir o app\n' +
+        '2. Rodar ./diagnose.sh no terminal\n' +
+        '3. Verificar se better-sqlite3 foi rebuildado: cd desktop && npx @electron/rebuild'
+      );
+      return;
+    }
 
     await this.refreshAll();
     this.startAutoScan();
   }
 
   async refreshAll() {
-    const watchlist = await window.api.getWatchlist();
+    this._showStatus('⏳', 'Carregando watchlist...');
+
+    let watchlist;
+    try {
+      watchlist = await window.api.getWatchlist();
+      this.log('Watchlist carregada: ' + JSON.stringify(watchlist?.map(w => w.symbol)));
+    } catch (e) {
+      this.error('getWatchlist falhou: ' + e.message);
+      this._showError('Erro ao carregar watchlist', e.message);
+      return;
+    }
+
     if (!watchlist || watchlist.length === 0) {
-      this.container.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-dim);">
-          <p>Watchlist vazia. Adicione pares nas Configurações.</p>
-        </div>`;
+      this._showStatus('📋', 'Watchlist vazia. Adicione pares em Configurações.');
       return;
     }
 
     this.container.innerHTML = '';
     const symbols = watchlist.map(w => w.symbol);
-
-    // Connect WebSocket
     this._connectWS(symbols);
 
-    // Run scans
-    const results = await scannerService.scanAll(symbols, (done, total, sym) => {
-      this.lastUpdate.textContent = `Analisando ${done}/${total}...`;
-    });
+    this._showStatus('🔍', 'Iniciando análises...');
+    let scanCount = 0;
+    let failCount = 0;
 
-    // Render cards
-    for (const r of results) {
-      this._renderCard(r);
+    for (const sym of symbols) {
+      this._showStatus('🔍', `Analisando ${sym} (${scanCount + failCount + 1}/${symbols.length})...`);
+
+      try {
+        const result = await scannerService.scan(sym);
+        if (result) {
+          this._renderCard(result);
+          scanCount++;
+          this.log(sym + ' scaneado: score=' + result.score);
+        } else {
+          failCount++;
+          this.error(sym + ' retornou null');
+          this._renderErrorCard(sym, 'Scan falhou');
+        }
+      } catch (e) {
+        failCount++;
+        this.error(sym + ' erro: ' + e.message);
+        this._renderErrorCard(sym, e.message);
+      }
     }
 
-    this.lastUpdate.textContent = `Atualizado ${new Date().toLocaleTimeString('pt-BR')}`;
+    this.lastUpdate.textContent = `Atualizado ${new Date().toLocaleTimeString('pt-BR')} — ${scanCount} OK, ${failCount} falhas`;
+    this.log('Scan completo: ' + scanCount + ' ok, ' + failCount + ' falhas');
+  }
 
-    // Save latest scans
-    for (const r of results) {
-      await window.api.saveScan(r);
+  _showStatus(emoji, text) {
+    if (this.container.children.length === 1 && this.container.children[0].classList.contains('status-msg')) {
+      this.container.children[0].innerHTML = `
+        <div style="font-size:40px;margin-bottom:12px">${emoji}</div>
+        <p>${text}</p>`;
+    } else {
+      this.container.innerHTML = `
+        <div class="status-msg" style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-dim)">
+          <div style="font-size:40px;margin-bottom:12px">${emoji}</div>
+          <p>${text}</p>
+        </div>`;
     }
   }
 
+  _showError(title, detail) {
+    this.container.innerHTML = `
+      <div class="status-msg" style="grid-column:1/-1;text-align:center;padding:60px">
+        <div style="font-size:40px;margin-bottom:12px">❌</div>
+        <p style="color:var(--red);font-weight:600;margin-bottom:12px">${title}</p>
+        <pre style="color:var(--text-dim);font-size:12px;white-space:pre-wrap;text-align:left;max-width:500px;margin:0 auto">${detail}</pre>
+        <button onclick="location.reload()" class="btn btn-primary" style="margin-top:16px">🔄 Tentar novamente</button>
+      </div>`;
+  }
+
   _connectWS(symbols) {
-    // Clean up old subs
     this.unsubscribers.forEach(fn => fn());
     this.unsubscribers = [];
 
-    priceStream.connect(symbols);
+    try {
+      priceStream.connect(symbols);
+      this.log('WebSocket conectado para ' + symbols.length + ' pares');
+    } catch (e) {
+      this.error('WebSocket falhou: ' + e.message);
+    }
 
     symbols.forEach(sym => {
-      const unsub = priceStream.subscribe(sym, (data) => {
-        this._updatePrice(sym, data.price, data.change);
-      });
-      this.unsubscribers.push(unsub);
+      try {
+        const unsub = priceStream.subscribe(sym, (data) => {
+          this._updatePrice(sym, data.price, data.change);
+        });
+        this.unsubscribers.push(unsub);
+      } catch (e) {
+        this.error('subscribe falhou para ' + sym + ': ' + e.message);
+      }
     });
   }
 
@@ -83,11 +146,13 @@ class Dashboard {
       result.score >= 60 ? 'score-moderate' :
       result.score >= 40 ? 'score-neutral' : 'score-weak';
 
-    const signalClass = result.signal.includes('COMPRA') ? 'signal-buy' :
-      result.signal.includes('VENDA') ? 'signal-sell' : 'signal-neutral';
+    const signalClass = result.signal?.includes('COMPRA') ? 'signal-buy' :
+      result.signal?.includes('VENDA') ? 'signal-sell' : 'signal-neutral';
 
     const barColor = result.score >= 60 ? 'var(--green)' :
       result.score >= 40 ? 'var(--yellow)' : 'var(--red)';
+
+    const decimals = result.price >= 1000 ? 2 : result.price >= 1 ? 2 : result.price >= 0.01 ? 4 : 6;
 
     card.innerHTML = `
       <div class="pair-card-header">
@@ -95,7 +160,7 @@ class Dashboard {
         <span id="change-${result.symbol}" class="pair-change dim">--</span>
       </div>
       <div class="pair-price" id="price-${result.symbol}">
-        $${result.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        $${result.price.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
       </div>
       <div class="pair-score-row">
         <div class="score-bar">
@@ -103,7 +168,7 @@ class Dashboard {
         </div>
         <span class="score-value ${scoreClass}" style="padding: 2px 8px; border-radius: 4px;">${result.score}</span>
       </div>
-      <div class="pair-signal ${signalClass}">${result.signal}</div>
+      <div class="pair-signal ${signalClass}">${result.signal || '--'}</div>
       <div class="pair-sparkline" id="spark-${result.symbol}"></div>
     `;
 
@@ -113,8 +178,21 @@ class Dashboard {
 
     this.container.appendChild(card);
 
-    // Draw mini sparkline
-    this._drawSparkline(result.symbol);
+    setTimeout(() => this._drawSparkline(result.symbol), 100);
+  }
+
+  _renderErrorCard(symbol, error) {
+    const card = document.createElement('div');
+    card.className = 'pair-card';
+    card.style.opacity = '0.5';
+    card.innerHTML = `
+      <div class="pair-card-header">
+        <span class="pair-symbol">${symbol.replace('USDT', '/USDT')}</span>
+        <span class="pair-change red">Erro</span>
+      </div>
+      <div style="font-size:12px;color:var(--red);margin-top:8px">${error}</div>
+    `;
+    this.container.appendChild(card);
   }
 
   _updatePrice(symbol, price, change) {
@@ -122,7 +200,6 @@ class Dashboard {
     const changeEl = document.getElementById(`change-${symbol}`);
     if (!priceEl) return;
 
-    // Format based on price
     const decimals = price >= 1000 ? 2 : price >= 1 ? 2 : price >= 0.01 ? 4 : 6;
     priceEl.textContent = `$${price.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 
@@ -142,7 +219,7 @@ class Dashboard {
       if (!klines || klines.length < 2) return;
 
       const canvas = document.createElement('canvas');
-      canvas.width = container.clientWidth * 2;
+      canvas.width = container.clientWidth * 2 || 560;
       canvas.height = 100;
       canvas.style.width = '100%';
       canvas.style.height = '50px';
@@ -169,8 +246,9 @@ class Dashboard {
         else ctx.lineTo(x, y);
       });
       ctx.stroke();
-
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      this.error('Sparkline ' + symbol + ': ' + e.message);
+    }
   }
 
   startAutoScan() {
